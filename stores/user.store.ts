@@ -12,10 +12,12 @@ interface UserState {
   profile: LearnerProfile | null;
   reputation: UserReputation | null;
   role: UserRole | null;
+  onboardingComplete: boolean;
   isLoading: boolean;
   setProfile: (profile: LearnerProfile) => void;
   setReputation: (reputation: UserReputation) => void;
   setRole: (role: UserRole) => void;
+  setOnboardingComplete: (complete: boolean) => void;
   clearUser: () => void;
   setLoading: (loading: boolean) => void;
 }
@@ -24,11 +26,13 @@ export const useUserStore = create<UserState>((set) => ({
   profile: null,
   reputation: null,
   role: null,
+  onboardingComplete: false,
   isLoading: false,
 
   setProfile: (profile) => set({ profile }),
   setReputation: (reputation) => set({ reputation }),
   setRole: (role) => set({ role }),
-  clearUser: () => set({ profile: null, reputation: null, role: null }),
+  setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
+  clearUser: () => set({ profile: null, reputation: null, role: null, onboardingComplete: false }),
   setLoading: (isLoading) => set({ isLoading }),
 }));

@@ -38,16 +38,17 @@ Build all shared components from scratch using StepFi's dark theme design system
 - `services/api.ts` — Axios instance, bearer-token request interceptor, single-flight 401 refresh-and-retry interceptor, redirect to `/(auth)/sign-in` on refresh failure
 - `services/auth.service.ts` — `getNonce`, `verify`, `refresh`
 - `services/reputation.service.ts` — `getScore(wallet)`
+- `services/learners.service.ts` — `updateProfile`
 - `services/loans.service.ts` — `getMyLoans`, `getLoanById`, `getAvailableCredit`, `createLoan`, `repayInstallment`
 
 ### Zustand Stores
 - `stores/auth.store.ts` — tokens + wallet address persisted via Expo SecureStore, `hydrate()` invoked from root layout
 - `stores/wallet.store.ts` — `isConnected`, `publicKey`, `status` (`WalletConnectionStatus`), `isSigning`
-- `stores/user.store.ts` — `profile`, `reputation`, `isLoading`
+- `stores/user.store.ts` — `profile`, `reputation`, `onboardingComplete`, `isLoading`
 - `stores/loans.store.ts` — `loans`, `selectedLoan`, `isLoading`
 
 ### Navigation (Expo Router)
-- `app/_layout.tsx` — root Stack, hydrates auth on mount, redirects unauth → `/(auth)/sign-in`, auth-in-auth-group → `/(tabs)/pay`
+- `app/_layout.tsx` — root Stack, hydrates auth on mount, redirects unauth → `/(auth)/sign-in`, auth-in-auth-group (and onboarded) → `/(tabs)/pay`, auth-but-not-onboarded → `/(auth)/onboarding`
 - `app/(auth)/_layout.tsx` — Stack
 - `app/(auth)/sign-in.tsx`, `app/(auth)/register.tsx` — placeholders
 - `app/(tabs)/_layout.tsx` — bottom Tabs (pay/invest/settings) with Lucide icons (`CreditCard`, `TrendingUp`, `Settings`), brand-green active tint
@@ -108,7 +109,7 @@ Build all shared components from scratch using StepFi's dark theme design system
 | Loan Apply | /loan/apply | Not started | — |
 | Vendor Browse | — | Not started | — |
 | Reputation Detail | — | Not started | — |
-| Onboarding | — | Not started | — |
+| Onboarding | /(auth)/onboarding | Completed | Multi-step wizard with FlatList paging |
 | Wallet Setup Guide | — | Not started | — |
 
 ---

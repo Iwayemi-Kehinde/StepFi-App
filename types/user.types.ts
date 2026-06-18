@@ -13,4 +13,9 @@ export interface LearnerProfile {
   city?: string;
   organization?: string;
   investmentFocus?: string;
+  skills?: string[];
+  goals?: string[];
+  githubUrl?: string;
+  linkedinUrl?: string;
+  onboardingComplete?: boolean;
 }
