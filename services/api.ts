@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { router } from 'expo-router';
 import { config } from '../constants/config';
 import { useAuthStore } from '../stores/auth.store';
@@ -6,6 +6,7 @@ import { getFromCache, setToCache } from '../src/offline/cache';
 import { useConnectivityStore } from '../src/offline/connectivity.store';
 import { enqueueAction } from '../src/offline/offline-queue';
 import type { QueueAction, QueueActionType } from '../src/offline/offline-queue';
+import { addBreadcrumb, captureServiceError } from './sentry';
 
 const api = axios.create({
   baseURL: config.API_BASE_URL,
@@ -19,6 +20,12 @@ api.interceptors.request.use(async (req) => {
     (req.headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
   }
 
+  // Breadcrumb for every outgoing request (URL only, no auth headers)
+  addBreadcrumb('http.request', `${req.method?.toUpperCase()} ${req.url}`, {
+    baseURL: req.baseURL ?? '',
+    timeout: req.timeout ?? 0,
+  });
+
   const method = req.method?.toLowerCase();
   if (!method || !['post', 'put', 'patch', 'delete'].includes(method)) {
     return req;
@@ -27,6 +34,7 @@ api.interceptors.request.use(async (req) => {
   const { isConnected } = useConnectivityStore.getState();
   if (isConnected) return req;
 
+  // Offline mitigation queue
   const action = await enqueueAction({
     type: getActionType(req.url ?? '', req.method ?? 'POST'),
     endpoint: req.url ?? '',
@@ -76,7 +84,8 @@ api.interceptors.response.use(
     }
     return res;
   },
-  async (error) => {
+  async (error: any) => {
+    // Intercept offline-queued mock items immediately
     if (error?.__offline_queued) {
       return {
         data: { queued: true, actionId: error.__action.id, unsignedXdr: '' },
@@ -90,6 +99,16 @@ api.interceptors.response.use(
     const original = error.config as RetriableRequest | undefined;
     const status = error.response?.status;
 
+    // Capture non-401 production exceptions to Sentry
+    if (status !== 401) {
+      captureServiceError('api', 'response', error as AxiosError);
+      addBreadcrumb('http.error', `HTTP ${status ?? 'network'} error`, {
+        url: original?.url ?? 'unknown',
+        status: status ?? 0,
+      }, 'error');
+    }
+
+    // Handle Token Expiration Refresh Sequence
     if (status === 401 && original && !original._retry) {
       original._retry = true;
 
@@ -111,6 +130,7 @@ api.interceptors.response.use(
       return api.request(original);
     }
 
+    // Offline read strategy fallback for standard broken GET failures
     if (original?.method?.toLowerCase() === 'get' && original?.url) {
       const cached = await getFromCache(`GET:${original.url}`);
       if (cached !== null) {
